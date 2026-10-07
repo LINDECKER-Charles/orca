@@ -1,5 +1,5 @@
 import type { FolderWorkspace } from '../../shared/folder-workspace-types'
-import type { ProjectGroup } from '../../shared/project-group-types'
+import type { ProjectGroup, ProjectGroupUpdates } from '../../shared/project-group-types'
 import type { Repo } from '../../shared/repo-types'
 import type {
   FolderWorkspacePathStatus,
@@ -78,10 +78,7 @@ export class RuntimeProjectGroupController {
     return group
   }
 
-  async updateGroup(
-    groupId: string,
-    updates: Partial<Pick<ProjectGroup, 'name' | 'isCollapsed' | 'tabOrder' | 'color'>>
-  ): Promise<ProjectGroup | null> {
+  async updateGroup(groupId: string, updates: ProjectGroupUpdates): Promise<ProjectGroup | null> {
     const store = this.deps.getStore()
     if (!store?.updateProjectGroup) {
       throw new Error('runtime_unavailable')
