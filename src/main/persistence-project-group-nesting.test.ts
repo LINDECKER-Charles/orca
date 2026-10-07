@@ -72,6 +72,39 @@ describe('project group nesting persistence', () => {
     expect(child).toMatchObject({ parentGroupId: parent.id, connectionId: 'conn-1' })
   })
 
+  it('rejects a manual subgroup on a different host than its parent', () => {
+    const store = createStore()
+    const local = store.createProjectGroup({ name: 'Local', createdFrom: 'manual' })
+    const remote = store.createProjectGroup({
+      name: 'Remote',
+      connectionId: 'conn-1',
+      createdFrom: 'manual'
+    })
+
+    for (const [parent, connectionId] of [
+      [remote, 'conn-2'],
+      [local, 'conn-1']
+    ] as const) {
+      expect(() =>
+        store.createProjectGroup({
+          name: 'Child',
+          connectionId,
+          parentGroupId: parent.id,
+          createdFrom: 'manual'
+        })
+      ).toThrow('same host')
+    }
+    expect(store.getProjectGroups()).toHaveLength(2)
+    expect(
+      store.createProjectGroup({
+        name: 'Child',
+        connectionId: 'conn-1',
+        parentGroupId: remote.id,
+        createdFrom: 'manual'
+      }).connectionId
+    ).toBe('conn-1')
+  })
+
   it('rejects a manual subgroup under an empty or missing parent', () => {
     const store = createStore()
 

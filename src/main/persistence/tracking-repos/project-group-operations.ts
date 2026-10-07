@@ -63,8 +63,12 @@ export class ProjectGroupPersistenceOperations {
       if (!canCreateProjectSubgroup(groups, parent.id)) {
         throw new Error(describeProjectGroupMoveRejection('too-deep'))
       }
-      // Why: a manual subgroup lives on its parent's host, like folder-scan children.
-      connectionId = input.connectionId ?? parent.connectionId ?? null
+      // Why: a manual subgroup lives on its parent's host, like folder-scan children; null means unspecified.
+      const parentConnectionId = parent.connectionId ?? null
+      if (input.connectionId && input.connectionId !== parentConnectionId) {
+        throw new Error(describeProjectGroupMoveRejection('host-mismatch'))
+      }
+      connectionId = parentConnectionId
     }
     const group = createProjectGroup({
       ...input,
