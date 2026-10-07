@@ -6,7 +6,7 @@ import {
 } from './project-groups'
 
 /** Top-level groups are level 1. Only manual creates and moves are capped, not folder imports. */
-export const MAX_PROJECT_GROUP_LEVELS = 5
+export const MAX_PROJECT_GROUP_LEVELS = 3
 
 export type ProjectGroupNestingNode = Pick<ProjectGroup, 'id' | 'parentGroupId' | 'connectionId'>
 

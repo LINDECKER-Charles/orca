@@ -83,24 +83,24 @@ describe('project group nesting persistence', () => {
     expect(store.getProjectGroups()).toEqual([])
   })
 
-  it('caps manual subgroups at five levels but keeps folder imports exempt', () => {
+  it('caps manual subgroups at three levels but keeps folder imports exempt', () => {
     const store = createStore()
-    const [, , , , level5] = createChain(store, 5, 'manual')
+    const [, , level3] = createChain(store, 3, 'manual')
 
     expect(() =>
       store.createProjectGroup({
         name: 'Too deep',
-        parentGroupId: level5.id,
+        parentGroupId: level3.id,
         createdFrom: 'manual'
       })
-    ).toThrow('at most 5 levels')
+    ).toThrow('at most 3 levels')
     expect(
       store.createProjectGroup({
         name: 'Imported',
-        parentGroupId: level5.id,
+        parentGroupId: level3.id,
         createdFrom: 'folder-scan'
       }).parentGroupId
-    ).toBe(level5.id)
+    ).toBe(level3.id)
   })
 
   it('moves a group last among its new siblings and back to the top level', () => {

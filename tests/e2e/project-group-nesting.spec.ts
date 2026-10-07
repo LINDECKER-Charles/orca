@@ -88,21 +88,21 @@ test.describe('Project Group nesting', () => {
     await orcaPage.screenshot({ path: testInfo.outputPath('subgroup-created.png') })
   })
 
-  test('disables New subgroup on a fifth-level group', async ({ orcaPage }, testInfo) => {
+  test('disables New subgroup on a third-level group', async ({ orcaPage }, testInfo) => {
     await waitForSessionReady(orcaPage)
     await showProjectGroupTree(orcaPage)
-    const names = ['Level 1', 'Level 2', 'Level 3', 'Level 4', 'Level 5']
+    const names = ['Level 1', 'Level 2', 'Level 3']
     const ids = await seedGroupChain(orcaPage, names)
     for (const [depth, id] of ids.entries()) {
       await expectGroupDepth(groupHeader(orcaPage, id), depth)
     }
-    await orcaPage.screenshot({ path: testInfo.outputPath('five-levels.png') })
+    await orcaPage.screenshot({ path: testInfo.outputPath('three-levels.png') })
 
     const newSubgroup = orcaPage.getByRole('menuitem', { name: 'New subgroup', exact: true })
-    await openGroupActions(orcaPage, ids[3]!, 'Level 4')
+    await openGroupActions(orcaPage, ids[1]!, 'Level 2')
     await expect(newSubgroup).toBeEnabled()
     await closeMenus(orcaPage)
-    await openGroupActions(orcaPage, ids[4]!, 'Level 5')
+    await openGroupActions(orcaPage, ids[2]!, 'Level 3')
     await expect(newSubgroup).toBeDisabled()
   })
 
@@ -141,12 +141,14 @@ test.describe('Project Group nesting', () => {
     const [otherId] = await seedGroupChain(orcaPage, ['Other'])
     await expectGroupDepth(groupHeader(orcaPage, grandchildId!), 2)
 
+    // Root already spans three levels at the top, so it has nowhere to go and the submenu is dropped.
     await openGroupActions(orcaPage, rootId!, 'Root')
-    await openMoveSubmenu(orcaPage)
-    await expect(moveTarget(orcaPage, otherId!)).toBeEnabled()
-    for (const hiddenId of [rootId!, childId!, grandchildId!]) {
-      await expect(moveTarget(orcaPage, hiddenId)).toHaveCount(0)
-    }
+    await expect(
+      orcaPage.getByRole('menuitem', { name: 'Rename group', exact: true })
+    ).toBeVisible()
+    await expect(
+      orcaPage.getByRole('menuitem', { name: 'Move to group', exact: true })
+    ).toHaveCount(0)
     await closeMenus(orcaPage)
 
     await openGroupActions(orcaPage, childId!, 'Child')
@@ -159,12 +161,13 @@ test.describe('Project Group nesting', () => {
     }
     await closeMenus(orcaPage)
 
-    // An unrelated group can still move anywhere in that subtree.
+    // An unrelated group can move into that subtree, but not below the third level.
     await openGroupActions(orcaPage, otherId!, 'Other')
     await openMoveSubmenu(orcaPage)
-    for (const targetId of [rootId!, childId!, grandchildId!]) {
+    for (const targetId of [rootId!, childId!]) {
       await expect(moveTarget(orcaPage, targetId)).toBeEnabled()
     }
+    await expect(moveTarget(orcaPage, grandchildId!)).toHaveCount(0)
     await orcaPage.screenshot({
       path: testInfo.outputPath('move-targets.png'),
       animations: 'disabled'

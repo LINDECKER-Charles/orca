@@ -118,35 +118,26 @@ afterEach(() => {
 })
 
 describe('ProjectGroupHeaderMenu', () => {
-  it('orders the actions and disables New subgroup on a fifth-level group', () => {
-    const levels = chain('level', 5)
-    renderMenu(levels[4], levels)
+  it('orders the actions and disables New subgroup on a third-level group', () => {
+    const levels = chain('level', 3)
+    renderMenu(levels[2], levels)
 
     expect(
       Array.from(document.body.querySelectorAll('[role="menuitem"]')).map(
         (item) => item.textContent
       )
-    ).toEqual([
-      'Rename group',
-      'New subgroup',
-      'Top level',
-      'level1',
-      'level2',
-      'level3',
-      'level4',
-      'Delete group'
-    ])
+    ).toEqual(['Rename group', 'New subgroup', 'Top level', 'level1', 'level2', 'Delete group'])
     expect(menuItem('New subgroup').disabled).toBe(true)
-    expect(menuItem('level4').disabled).toBe(true)
+    expect(menuItem('level2').disabled).toBe(true)
   })
 
   it("reads the level from the group's host, not from same-id groups on another host", () => {
-    const local = chain('level', 4)
+    const local = chain('level', 2)
     const runtime = [
-      ...chain('remote', 4, { executionHostId: 'runtime:env-1' }),
-      group('level4', { parentGroupId: 'remote4', executionHostId: 'runtime:env-1' })
+      ...chain('remote', 2, { executionHostId: 'runtime:env-1' }),
+      group('level2', { parentGroupId: 'remote2', executionHostId: 'runtime:env-1' })
     ]
-    renderMenu(local[3], [...local, ...runtime])
+    renderMenu(local[1], [...local, ...runtime])
 
     expect(menuItem('New subgroup').disabled).toBe(false)
   })

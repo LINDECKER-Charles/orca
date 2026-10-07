@@ -40,7 +40,7 @@ function outline(targets: readonly ProjectGroupMoveTarget[]): string[] {
 }
 
 describe('getProjectGroupMoveTargetsForGroup', () => {
-  it('lists the sidebar tree without the moving subtree and disables the current parent', () => {
+  it('lists the sidebar tree without the moving group and disables the current parent', () => {
     const groups = [
       group('personal', { name: 'Personal', tabOrder: 1 }),
       group('acme', { name: 'Acme', tabOrder: 0 }),
@@ -51,23 +51,24 @@ describe('getProjectGroupMoveTargetsForGroup', () => {
       group('drafts', { name: 'Drafts', parentGroupId: 'blog' })
     ]
 
-    expect(outline(getProjectGroupMoveTargetsForGroup(groups, groups[5]))).toEqual([
+    expect(outline(getProjectGroupMoveTargetsForGroup(groups, groups[6]))).toEqual([
       'Acme',
       '  Infra',
       '  Web',
-      'Personal (disabled)',
-      '  Web'
+      'Personal',
+      '  Web',
+      '  Blog (disabled)'
     ])
   })
 
-  it('hides parents that would push the moved subtree past five levels', () => {
-    const levels = chain('level', 5)
+  it('hides parents that would push the moved subtree past three levels', () => {
+    const levels = chain('level', 3)
     const moving = group('moving', { tabOrder: 1 })
     const groups = [...levels, moving, group('child', { parentGroupId: 'moving' })]
 
     expect(
       getProjectGroupMoveTargetsForGroup(groups, moving).map((target) => target.group.id)
-    ).toEqual(['level1', 'level2', 'level3'])
+    ).toEqual(['level1'])
   })
 
   it('offers only groups on the moving group host, even when ids repeat across hosts', () => {

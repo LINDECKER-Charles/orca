@@ -50,18 +50,18 @@ describe('project group levels', () => {
     expect(getProjectGroupSubtreeLevels(groups, 'a')).toBe(2)
   })
 
-  it('allows a subgroup under level 4 but not under level 5', () => {
+  it('allows a subgroup under level 2 but not under level 3', () => {
     const groups = chain('l', MAX_PROJECT_GROUP_LEVELS)
 
-    expect(canCreateProjectSubgroup(groups, 'l4')).toBe(true)
-    expect(canCreateProjectSubgroup(groups, 'l5')).toBe(false)
+    expect(canCreateProjectSubgroup(groups, 'l2')).toBe(true)
+    expect(canCreateProjectSubgroup(groups, 'l3')).toBe(false)
     expect(canCreateProjectSubgroup(groups, 'unknown')).toBe(false)
   })
 })
 
 describe('getProjectGroupMoveRejection', () => {
   const groups = [
-    ...chain('l', 5),
+    ...chain('l', 3),
     group('leaf'),
     group('pair'),
     group('pair-child', 'pair'),
@@ -72,7 +72,7 @@ describe('getProjectGroupMoveRejection', () => {
     expect(getProjectGroupMoveRejection(groups, 'unknown', 'l1')).toBe('group-not-found')
     expect(getProjectGroupMoveRejection(groups, 'leaf', 'unknown')).toBe('parent-not-found')
     expect(getProjectGroupMoveRejection(groups, 'l2', 'l2')).toBe('self')
-    expect(getProjectGroupMoveRejection(groups, 'l2', 'l4')).toBe('descendant')
+    expect(getProjectGroupMoveRejection(groups, 'l1', 'l3')).toBe('descendant')
   })
 
   it('rejects a parent on another host', () => {
@@ -84,24 +84,24 @@ describe('getProjectGroupMoveRejection', () => {
   })
 
   it('counts the moved subtree against the level cap', () => {
-    expect(getProjectGroupMoveRejection(groups, 'leaf', 'l4')).toBe(null)
-    expect(getProjectGroupMoveRejection(groups, 'leaf', 'l5')).toBe('too-deep')
-    expect(getProjectGroupMoveRejection(groups, 'pair', 'l3')).toBe(null)
-    expect(getProjectGroupMoveRejection(groups, 'pair', 'l4')).toBe('too-deep')
+    expect(getProjectGroupMoveRejection(groups, 'leaf', 'l2')).toBe(null)
+    expect(getProjectGroupMoveRejection(groups, 'leaf', 'l3')).toBe('too-deep')
+    expect(getProjectGroupMoveRejection(groups, 'pair', 'l1')).toBe(null)
+    expect(getProjectGroupMoveRejection(groups, 'pair', 'l2')).toBe('too-deep')
   })
 
   it('always allows the top level', () => {
-    expect(getProjectGroupMoveRejection(groups, 'l5', null)).toBe(null)
+    expect(getProjectGroupMoveRejection(groups, 'l3', null)).toBe(null)
     expect(getProjectGroupMoveRejection(groups, 'remote', null)).toBe(null)
   })
 
   it('lets an imported tree deeper than the cap move without getting deeper', () => {
-    const deep = [...chain('l', 5), ...chain('d', 7)]
+    const deep = [...chain('l', 3), ...chain('d', 5)]
 
-    expect(getProjectGroupMoveRejection(deep, 'd7', 'l5')).toBe(null)
-    expect(getProjectGroupMoveRejection(deep, 'd6', 'l5')).toBe(null)
-    expect(getProjectGroupMoveRejection(deep, 'd5', 'l5')).toBe('too-deep')
-    expect(getProjectGroupMoveRejection(deep, 'd5', 'd1')).toBe(null)
+    expect(getProjectGroupMoveRejection(deep, 'd5', 'l3')).toBe(null)
+    expect(getProjectGroupMoveRejection(deep, 'd4', 'l3')).toBe(null)
+    expect(getProjectGroupMoveRejection(deep, 'd3', 'l3')).toBe('too-deep')
+    expect(getProjectGroupMoveRejection(deep, 'd3', 'd1')).toBe(null)
   })
 
   it('names the cap in the too-deep message', () => {
