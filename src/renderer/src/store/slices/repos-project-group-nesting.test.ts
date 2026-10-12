@@ -75,7 +75,7 @@ beforeEach(() => {
   })
 })
 
-describe('createProjectGroup with a parent group', () => {
+describe('createProjectSubgroup', () => {
   it("creates the subgroup on the parent's runtime host and SSH target while the local host is focused", async () => {
     // Why: hosts older than nesting do not inherit the parent's SSH target, so the client sends it.
     const runtimeParent = {
@@ -93,7 +93,7 @@ describe('createProjectGroup with a parent group', () => {
 
     const created = await store
       .getState()
-      .createProjectGroup('Child', { parentGroupId: 'parent', hostId: 'runtime:env-1' })
+      .createProjectSubgroup('Child', 'parent', { hostId: 'runtime:env-1' })
 
     expect(runtimeEnvironmentCall).toHaveBeenCalledWith({
       selector: 'env-1',
@@ -111,11 +111,11 @@ describe('createProjectGroup with a parent group', () => {
     expect(store.getState().projectGroups).toContainEqual(created)
   })
 
-  it('keeps the plain create payload and focused-host routing unchanged', async () => {
+  it('leaves the plain top-level create payload unchanged', async () => {
     projectGroupsCreate.mockResolvedValue(childGroup)
     const store = createStoreWith([{ ...parentGroup, executionHostId: 'runtime:env-1' }], null)
 
-    await store.getState().createProjectGroup('Child')
+    await store.getState().createProjectGroup('Child', 'local')
 
     expect(projectGroupsCreate.mock.calls).toStrictEqual([
       [{ name: 'Child', createdFrom: 'manual' }]

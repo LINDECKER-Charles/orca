@@ -5,7 +5,10 @@ import { translate } from '@/i18n/i18n'
 import { selectProjectGroupRemovalTargets } from '@/store/slices/project-group-removal-targets'
 import type { ProjectGroup } from '../../../../../../shared/project-group-types'
 import type { Repo } from '../../../../../../shared/repo-types'
-import type { ExecutionHostId } from '../../../../../../shared/execution-host'
+import {
+  getRepoExecutionHostId,
+  type ExecutionHostId
+} from '../../../../../../shared/execution-host'
 import { getProjectGroupHeaderKey } from '../grouping/group-keys'
 import type { ProjectGroupHeaderActions } from './project-group-header-actions'
 
@@ -104,6 +107,7 @@ export function useProjectGroupDialogs(args: {
   const { repos, repoMap, projectGroups } = args
   const moveProjectToGroup = useAppStore((s) => s.moveProjectToGroup)
   const createProjectGroup = useAppStore((s) => s.createProjectGroup)
+  const createProjectSubgroup = useAppStore((s) => s.createProjectSubgroup)
   const updateProjectGroup = useAppStore((s) => s.updateProjectGroup)
   const moveProjectGroup = useAppStore((s) => s.moveProjectGroup)
   const revealSidebarRow = useAppStore((s) => s.revealSidebarRow)
@@ -122,14 +126,14 @@ export function useProjectGroupDialogs(args: {
       if (repo.projectGroupId === groupId) {
         return
       }
-      void moveProjectToGroup(repo.id, groupId)
+      void moveProjectToGroup(repo.id, groupId, undefined, getRepoExecutionHostId(repo))
     },
     [moveProjectToGroup]
   )
 
   const handleRemoveProjectFromGroup = useCallback(
     (repo: Repo) => {
-      void moveProjectToGroup(repo.id, null)
+      void moveProjectToGroup(repo.id, null, undefined, getRepoExecutionHostId(repo))
     },
     [moveProjectToGroup]
   )
@@ -166,8 +170,7 @@ export function useProjectGroupDialogs(args: {
         return
       }
       if (nameDialog.type === 'create-subgroup') {
-        const group = await createProjectGroup(name, {
-          parentGroupId: nameDialog.parentGroupId,
+        const group = await createProjectSubgroup(name, nameDialog.parentGroupId, {
           hostId: nameDialog.hostId
         })
         if (group) {
@@ -178,9 +181,10 @@ export function useProjectGroupDialogs(args: {
         return
       }
       if (nameDialog.type === 'create-from-repo') {
-        const group = await createProjectGroup(name)
+        const hostId = getRepoExecutionHostId(nameDialog.repo)
+        const group = await createProjectGroup(name, hostId)
         if (group) {
-          await moveProjectToGroup(nameDialog.repo.id, group.id)
+          await moveProjectToGroup(nameDialog.repo.id, group.id, undefined, hostId)
         }
         return
       }
@@ -205,7 +209,14 @@ export function useProjectGroupDialogs(args: {
         )
       }
     },
-    [createProjectGroup, moveProjectToGroup, nameDialog, revealSidebarRow, updateProjectGroup]
+    [
+      createProjectGroup,
+      createProjectSubgroup,
+      moveProjectToGroup,
+      nameDialog,
+      revealSidebarRow,
+      updateProjectGroup
+    ]
   )
 
   const deleteTargets = useMemo(() => {

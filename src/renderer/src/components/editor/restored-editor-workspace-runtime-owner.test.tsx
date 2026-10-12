@@ -5,7 +5,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as RuntimeFileClient from '@/runtime/runtime-file-client'
 import { useAppStore } from '@/store'
-import { makeWorktree } from '@/store/slices/store-test-helpers'
+import { makeWorktree } from '../../store/slices/worktrees-slice-test-fixtures'
 import type { FileContent } from './editor-panel-content-types'
 import {
   useEditorPanelFileContentLoader,
@@ -125,7 +125,7 @@ describe('a restored tab whose workspace moved to its managed server', () => {
     await act(async () => load!(FILE_PATH, file.id, WORKTREE, 'README.md'))
     expect(mocks.readRuntimeFileContent).toHaveBeenCalledTimes(1)
     expect(mocks.readRuntimeFileContent.mock.calls[0]?.[0]).toMatchObject({
-      settings: { activeRuntimeEnvironmentId: 'env-1' },
+      target: { kind: 'environment', environmentId: 'env-1' },
       worktreeId: WORKTREE
     })
     expect(fileContents[file.id]).toMatchObject({ content: '# repo' })

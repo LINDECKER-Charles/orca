@@ -9,6 +9,7 @@ import type { ProjectGroup } from '../../../../../../shared/project-group-types'
 const mocks = vi.hoisted(() => ({
   moveProjectToGroup: vi.fn(),
   createProjectGroup: vi.fn(),
+  createProjectSubgroup: vi.fn(),
   updateProjectGroup: vi.fn(),
   moveProjectGroup: vi.fn(),
   revealSidebarRow: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock('@/store', () => ({
     selector({
       moveProjectToGroup: mocks.moveProjectToGroup,
       createProjectGroup: mocks.createProjectGroup,
+      createProjectSubgroup: mocks.createProjectSubgroup,
       updateProjectGroup: mocks.updateProjectGroup,
       moveProjectGroup: mocks.moveProjectGroup,
       revealSidebarRow: mocks.revealSidebarRow,
@@ -140,7 +142,7 @@ describe('project group dialogs carry the owner host', () => {
   })
 
   it("creates a subgroup on the parent group's host and reveals it", async () => {
-    mocks.createProjectGroup.mockResolvedValue({
+    mocks.createProjectSubgroup.mockResolvedValue({
       ...remoteGroup,
       id: 'group-child',
       parentGroupId: remoteGroup.id
@@ -157,8 +159,7 @@ describe('project group dialogs carry the owner host', () => {
       await latest!.handleSubmitProjectGroupName('Child')
     })
 
-    expect(mocks.createProjectGroup).toHaveBeenCalledWith('Child', {
-      parentGroupId: remoteGroup.id,
+    expect(mocks.createProjectSubgroup).toHaveBeenCalledWith('Child', remoteGroup.id, {
       hostId: 'runtime:env-1'
     })
     expect(mocks.revealSidebarRow).toHaveBeenCalledWith('project-group:group-child')
@@ -166,7 +167,7 @@ describe('project group dialogs carry the owner host', () => {
   })
 
   it('surfaces an unconfirmed-subgroup toast when the parent host does not answer', async () => {
-    mocks.createProjectGroup.mockResolvedValue(null)
+    mocks.createProjectSubgroup.mockResolvedValue(null)
     await renderHookProbe()
     await act(async () => {
       latest!.projectGroupActions.onCreateSubgroup(

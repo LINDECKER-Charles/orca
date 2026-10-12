@@ -5,15 +5,14 @@ import type { ExecutionHostId } from '../../../../shared/execution-host'
 import { PROJECT_GROUP_NESTING_RUNTIME_CAPABILITY } from '../../../../shared/project-group-nesting-capability'
 import {
   callRuntimeRpc,
-  getActiveRuntimeTarget,
   runtimeEnvironmentSupportsCapability
 } from '../../runtime/runtime-rpc-client'
 import {
   projectGroupMatchesOwnerHost,
   resolveProjectGroupOwnerHostId,
-  settingsForProjectGroupOwner
+  runtimeTargetForProjectGroupOwner
 } from '../slices/project-group-owner-routing'
-import { projectGroupWithFetchedOwner } from './project-group-owner-stamping'
+import { adoptFromEndpoint } from '../adopt-from-endpoint'
 
 // Why: the sidebar lists groups from every host, so the mutation follows the group's owner, not the focused host.
 export function createProjectGroupOwnerUpdate(
@@ -27,7 +26,10 @@ export function createProjectGroupOwnerUpdate(
     applied: (group: ProjectGroup) => boolean = () => true
   ): Promise<boolean> => {
     const ownerHostId = resolveProjectGroupOwnerHostId(get(), groupId, hostId)
-    const target = getActiveRuntimeTarget(settingsForProjectGroupOwner(get(), groupId, hostId))
+    const target = runtimeTargetForProjectGroupOwner(get(), groupId, hostId)
+    if (!target) {
+      return false
+    }
     // Why: hosts older than nesting strip parentGroupId, so a move only goes to hosts that advertise it.
     if (
       updates.parentGroupId !== undefined &&
@@ -54,7 +56,7 @@ export function createProjectGroupOwnerUpdate(
     if (!updated || !applied(updated)) {
       return false
     }
-    const ownedGroup = projectGroupWithFetchedOwner(updated, target)
+    const ownedGroup = adoptFromEndpoint(target, { kind: 'projectGroup', row: updated })
     set((s) => ({
       projectGroups: s.projectGroups.map((group) =>
         projectGroupMatchesOwnerHost(group, groupId, ownerHostId) ? ownedGroup : group
