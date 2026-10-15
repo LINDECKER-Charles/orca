@@ -10,10 +10,8 @@ import {
 } from '../slices/project-group-owner-routing'
 import { findRepoForHost, repoMatchesHostIdentity } from '../slices/repo-host-identity'
 import { callRuntimeRpc } from '../../runtime/runtime-rpc-client'
-import {
-  runtimeTargetForOwnerHostId,
-  type RuntimeClientTarget
-} from '../../runtime/runtime-client-target'
+import type { RuntimeClientTarget } from '../../../../shared/runtime-client-target'
+import { ipcOrRuntimeTargetForHostId } from '../../runtime/runtime-client-target'
 import { findIndexedProjectGroupOwner } from '@/lib/worktree-runtime-owner-index'
 import { getRepoExecutionHostId } from '../../../../shared/execution-host'
 import type { ProjectRemovalFailure, RepoSlice } from '../repos/repo-state'
@@ -73,7 +71,7 @@ export function createProjectGroupMutationActions(
     createProjectGroup: async (name, hostId) => {
       try {
         // Why: a new group lands on the host of the project that seeds it, not the focused one.
-        const target = runtimeTargetForOwnerHostId(hostId)
+        const target = ipcOrRuntimeTargetForHostId(hostId)
         return target ? await createOnTarget(target, { name, createdFrom: 'manual' }) : null
       } catch (err) {
         console.error('Failed to create project group:', err)
@@ -257,7 +255,7 @@ export function createProjectGroupMutationActions(
     moveProjectToGroup: async (projectId, groupId, order, hostId) => {
       try {
         const repo = findRepoForHost(get().repos, projectId, { settings: get().settings, hostId })
-        const target = repo ? runtimeTargetForOwnerHostId(getRepoExecutionHostId(repo)) : null
+        const target = repo ? ipcOrRuntimeTargetForHostId(getRepoExecutionHostId(repo)) : null
         if (!target) {
           return false
         }
