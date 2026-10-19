@@ -7,7 +7,7 @@ import type {
   AgentSessionStatusSummary
 } from '../../../../shared/agent-session-wire'
 import { buildSubagentChildRows } from '../sidebar/worktree-subagent-child-rows'
-import { resolveAttention } from '../sidebar/smart-attention'
+import { resolveAttention } from '../../../../shared/sidebar-list/smart-attention'
 import { isExplicitAgentStatusFresh } from '@/lib/pane-agent-evidence'
 import type { AgentStatusEntry } from '../../../../shared/agent-status-types'
 import type { Tab } from '../../../../shared/tab-types'
@@ -46,8 +46,6 @@ vi.mock('@/store', async () => {
 })
 
 vi.mock('@/lib/worktree-runtime-owner', () => ({
-  getRuntimeEnvironmentIdForWorktree: (state: { testRuntimeOwner?: string | null }) =>
-    state.testRuntimeOwner ?? null,
   getExecutionHostIdForWorktree: (state: { testRuntimeOwner?: string | null }) =>
     state.testRuntimeOwner ? `runtime:${state.testRuntimeOwner}` : 'local'
 }))

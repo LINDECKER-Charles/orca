@@ -9,7 +9,7 @@ import {
   getRepoExecutionHostId,
   type ExecutionHostId
 } from '../../../../../../shared/execution-host'
-import { getProjectGroupHeaderKey } from '../grouping/group-keys'
+import { getProjectGroupHeaderKey } from '../../../../../../shared/sidebar-list/group-keys'
 import type { ProjectGroupHeaderActions } from './project-group-header-actions'
 
 export type ProjectGroupNameDialogState =

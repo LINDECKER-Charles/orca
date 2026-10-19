@@ -1,4 +1,5 @@
 import { expect } from 'vitest'
+import { AGENT_SESSION_CURRENT_REQUESTS_CLIENT_CAPABILITY } from '../../../src/shared/agent-session-current-requests-capability'
 
 export const SESSION = 'session-alpha'
 export const WORKSPACE = 'workspace-1'
@@ -22,6 +23,7 @@ export const TURN_COMPLETION_FEED_METHOD = 'agentSession.subscribeTurnCompletion
 export const STRUCTURED_CALLS: {
   method: string
   hostMethod: string | null
+  clientCapability?: string
   result?: Record<string, unknown>
 }[] = [
   { method: 'agentSession.createSupport', hostMethod: null, result: { supported: true } },
@@ -165,6 +167,12 @@ export const STRUCTURED_CALLS: {
     result: { ok: true, page: { items: [] } }
   },
   {
+    method: 'agentSession.currentRequests',
+    hostMethod: 'readCurrentRequests',
+    clientCapability: AGENT_SESSION_CURRENT_REQUESTS_CLIENT_CAPABILITY,
+    result: { json: '[]', nextCursor: null }
+  },
+  {
     method: CONVERSATION_OUTLINE_METHOD,
     hostMethod: 'journalSnapshot',
     result: { sessionId: SESSION, entries: [], omittedEntries: 0 }
@@ -202,5 +210,12 @@ export const STRUCTURED_CALLS: {
     method: 'agentSession.agents',
     hostMethod: null,
     result: { agents: expect.arrayContaining([expect.objectContaining({ agent: 'codex' })]) }
+  },
+  // Answered from the runtime's shared availability resource, not the host, so the stub's first
+  // generation is the only signal that the gate opened.
+  {
+    method: 'agentSession.subscribeAvailability',
+    hostMethod: null,
+    result: { type: 'availability', agents: [] }
   }
 ]

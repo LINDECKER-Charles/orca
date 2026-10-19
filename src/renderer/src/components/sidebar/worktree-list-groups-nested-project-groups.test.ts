@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { buildRows } from './worktree-list/grouping/build-rows'
-import { getGroupKeysForWorktree } from './worktree-list/grouping/worktree-group-keys'
+import { buildRows } from './worktree-list/grouping/build-rows.test-fixture'
+import { getGroupKeysForWorktree } from '../../../../shared/sidebar-list/worktree-group-keys'
+import { getProjectGroupOccurrencePaths } from '../../../../shared/sidebar-list/project-group-sections'
 import { repo, worktree, repoMap } from './worktree-list-groups-test-fixtures'
 import type { FolderWorkspace } from '../../../../shared/folder-workspace-types'
 import type { ProjectGroup } from '../../../../shared/project-group-types'
@@ -72,7 +73,7 @@ describe('project groups', () => {
     })
   })
 
-  it('links subgroups to a parent on their own host when group ids repeat across hosts', () => {
+  it('keeps every group visible when same-id copies from two hosts close a parent loop', () => {
     const group: ProjectGroup = {
       id: 'group-x',
       name: 'X',
@@ -85,11 +86,10 @@ describe('project groups', () => {
       createdAt: 1,
       updatedAt: 1
     }
-    // Each host is acyclic on its own; linking by bare id would loop Y -> X -> Y.
+    // Each host is acyclic on its own; the drawn copies (Local X, Remote Y) loop X -> Y -> X.
     const groups: ProjectGroup[] = [
       { ...group, name: 'Local X', parentGroupId: 'group-y', executionHostId: 'local' },
       { ...group, id: 'group-y', name: 'Local Y', executionHostId: 'local' },
-      { ...group, name: 'Remote X', tabOrder: 1, executionHostId: 'runtime:env-1' },
       {
         ...group,
         id: 'group-y',
@@ -118,11 +118,14 @@ describe('project groups', () => {
     expect(
       rows.flatMap((row) => (row.type === 'header' ? [[row.label, row.projectGroupDepth]] : []))
     ).toEqual([
-      ['Local Y', 0],
-      ['Local X', 1],
-      ['Remote X', 0],
+      ['Local X', 0],
       ['Remote Y', 1]
     ])
+    // Reveal walks the same parents the rows were drawn with.
+    expect(getProjectGroupOccurrencePaths(groups).get('group-y')).toEqual({
+      key: 'project-group:group-y',
+      parent: { key: 'project-group:group-x', parent: undefined }
+    })
   })
 
   it('renders folder workspaces under their owning folder-backed Project Group', () => {
@@ -433,7 +436,6 @@ describe('project groups', () => {
         new Map([[groupedRepo.id, groupedRepo]]),
         null,
         undefined,
-        undefined,
         [group]
       )
     ).toEqual(['project-group:group-1', 'repo:repo-1'])
@@ -460,7 +462,6 @@ describe('project groups', () => {
         worktree,
         new Map([[groupedRepo.id, groupedRepo]]),
         null,
-        undefined,
         undefined,
         [loadedGroup]
       )

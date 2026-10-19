@@ -2,7 +2,7 @@ import '../unused-default-rpc-methods.test-fixture'
 import { describe, expect, it, vi } from 'vitest'
 import { RpcDispatcher } from '../dispatcher'
 import type { RpcRequest } from '../core'
-import { OrcaRuntimeService } from '../../orca-runtime'
+import type { OrcaRuntimeService } from '../../orca-runtime'
 import { REPO_METHODS } from './repo'
 import {
   NATIVE_REMOTE_RUNTIME_CLIENT_CAPABILITIES,
@@ -17,6 +17,16 @@ import { SSH_TARGET_MANAGEMENT_RUNTIME_CAPABILITY } from '../../../../shared/ssh
 
 function makeRequest(method: string, params?: unknown): RpcRequest {
   return { id: 'req-1', authToken: 'tok', method, params }
+}
+
+function repoDispatcher(
+  runtime: Pick<OrcaRuntimeService, 'getRuntimeId'> & Partial<OrcaRuntimeService>
+) {
+  return new RpcDispatcher({
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: These RPC cases supply every runtime method their handlers and envelope access.
+    runtime: runtime as OrcaRuntimeService,
+    methods: REPO_METHODS
+  })
 }
 
 describe('repo RPC methods', () => {
@@ -180,10 +190,9 @@ describe('repo RPC methods', () => {
       connectionId: 'ssh-p8',
       kind: 'git' as const
     }
-    const runtime = new OrcaRuntimeService(null)
-    const addSshRepo = vi.spyOn(runtime, 'addSshRepo').mockResolvedValue(repo)
-    const addRepo = vi.spyOn(runtime, 'addRepo')
-    const dispatcher = new RpcDispatcher({ runtime, methods: REPO_METHODS })
+    const addSshRepo = vi.fn<OrcaRuntimeService['addSshRepo']>().mockResolvedValue(repo)
+    const addRepo = vi.fn<OrcaRuntimeService['addRepo']>()
+    const dispatcher = repoDispatcher({ getRuntimeId: () => 'test-runtime', addSshRepo, addRepo })
 
     const response = await dispatcher.dispatch(
       makeRequest('repo.addRemote', { connectionId: 'ssh-p8', remotePath: '/srv/project' }),
@@ -196,9 +205,8 @@ describe('repo RPC methods', () => {
   })
 
   it('refuses a remote project without an SSH target rather than adding a server path', async () => {
-    const runtime = new OrcaRuntimeService(null)
-    const addSshRepo = vi.spyOn(runtime, 'addSshRepo')
-    const dispatcher = new RpcDispatcher({ runtime, methods: REPO_METHODS })
+    const addSshRepo = vi.fn<OrcaRuntimeService['addSshRepo']>()
+    const dispatcher = repoDispatcher({ getRuntimeId: () => 'test-runtime', addSshRepo })
 
     const response = await dispatcher.dispatch(
       makeRequest('repo.addRemote', { remotePath: '/srv/project' })
@@ -503,8 +511,7 @@ describe('repo RPC methods', () => {
   })
 
   it('persists normalized ghAccount bindings and clear sentinels', async () => {
-    const runtime = new OrcaRuntimeService(null)
-    vi.spyOn(runtime, 'updateRepo').mockResolvedValue({
+    const updateRepo = vi.fn<OrcaRuntimeService['updateRepo']>().mockResolvedValue({
       id: 'repo-1',
       path: '/srv/repo',
       displayName: 'repo',
@@ -512,7 +519,7 @@ describe('repo RPC methods', () => {
       addedAt: 0,
       ghAccount: { host: 'github.com', user: 'Alice' }
     })
-    const dispatcher = new RpcDispatcher({ runtime, methods: REPO_METHODS })
+    const dispatcher = repoDispatcher({ getRuntimeId: () => 'test-runtime', updateRepo })
 
     const response = await dispatcher.dispatch(
       makeRequest('repo.update', {
@@ -522,7 +529,7 @@ describe('repo RPC methods', () => {
       { clientCapabilities: [WORKTREE_VISIBILITY_DEFAULTS_RUNTIME_CAPABILITY] }
     )
 
-    expect(runtime.updateRepo).toHaveBeenCalledWith('repo-1', {
+    expect(updateRepo).toHaveBeenCalledWith('repo-1', {
       ghAccount: { host: 'github.com', user: 'Alice' }
     })
     expect(response).toMatchObject({
@@ -536,7 +543,7 @@ describe('repo RPC methods', () => {
         updates: { ghAccount: null }
       })
     )
-    expect(runtime.updateRepo).toHaveBeenLastCalledWith('repo-1', { ghAccount: null })
+    expect(updateRepo).toHaveBeenLastCalledWith('repo-1', { ghAccount: null })
   })
 
   it('persists agent worktree visibility updates', async () => {
@@ -804,12 +811,10 @@ describe('repo RPC methods', () => {
       )
     }
 
-    expect(runtime.updateProjectGroup).toHaveBeenNthCalledWith(1, 'group-1', {
-      parentGroupId: 'group-2'
-    })
-    expect(runtime.updateProjectGroup).toHaveBeenNthCalledWith(2, 'group-1', {
-      parentGroupId: null
-    })
+    expect(vi.mocked(runtime.updateProjectGroup).mock.calls).toEqual([
+      ['group-1', { parentGroupId: 'group-2' }],
+      ['group-1', { parentGroupId: null }]
+    ])
     expect(RUNTIME_CAPABILITIES).toContain(PROJECT_GROUP_NESTING_RUNTIME_CAPABILITY)
   })
 

@@ -1,11 +1,17 @@
+import type { SmartTier } from '../../../src/shared/sidebar-list/sort-stamps'
 import type { ExecutionHostId } from '../../../src/shared/execution-host'
 import type { AgentWorkingMode } from '../../../src/shared/agent-status-types'
-import type { RuntimeWorktreeAgentRow } from '../../../src/shared/runtime-types'
+import type {
+  RuntimeWorktreeAgentRow,
+  RuntimeWorktreePsSummary
+} from '../../../src/shared/runtime-types'
 import type { ProjectSectionRepo } from '../../../src/shared/project-section-grouping'
 import type { WorkspaceRowFilters } from '../../../src/shared/workspace-view/workspace-row-filters'
 
 export type Worktree = {
   sectionListKey?: string
+  /** Show the existing project-name surface for a child from another repo. */
+  showProjectName?: boolean
   workspaceKind?: 'git' | 'folder-workspace'
   worktreeId: string
   repoId: string
@@ -24,6 +30,10 @@ export type Worktree = {
   sortOrder?: number
   manualOrder?: number
   lastActivityAt?: number
+  smartTier?: SmartTier
+  smartAt?: number
+  /** The host sorts by its own stamps; see src/shared/sidebar-list/stamp-order.ts. */
+  sortedByStamps?: true
   createdAt?: number
   // Why: on-disk worktree directory path. Needed by NewWorktreeModal so the
   // marine-creature fallback dedupes against filesystem basenames.
@@ -36,6 +46,7 @@ export type Worktree = {
   /** Workspace options facts the host stamps (RuntimeWorktreePsSummary); older hosts send none. */
   defaultBranch?: boolean
   automationCreated?: true
+  automationName?: string
   cliCreated?: true
   detachedHead?: true
   worktreeInstanceId?: string
@@ -46,6 +57,8 @@ export type Worktree = {
   lineageDepth?: number
   lineageChildCount?: number
   lineageCollapsed?: boolean
+  /** The collapse key the shared builder gave this row's children; set only on a feed-built list. */
+  lineageGroupKey?: string
   isLastLineageChild?: boolean
   liveTerminalCount: number
   hasAttachedPty: boolean
@@ -53,11 +66,13 @@ export type Worktree = {
   lastOutputAt?: number
   isPinned: boolean
   isActive?: boolean
-  linkedPR: { number: number; state: string } | null
+  linkedPR: RuntimeWorktreePsSummary['linkedPR']
   linkedIssue?: number | null
   linkedLinearIssue?: string | null
   linkedGitLabMR?: number | null
   linkedGitLabIssue?: number | null
+  /** Every linked issue and review; hosts before the attachment list omit it. Unchecked wire data. */
+  linkedItems?: RuntimeWorktreePsSummary['linkedItems']
   comment?: string
   status?: 'working' | 'active' | 'permission' | 'done' | 'inactive'
   workingMode?: AgentWorkingMode
@@ -77,5 +92,7 @@ export type Section = {
   icon?: 'pin'
   /** Under Project grouping, the repo whose colour and icon the header shows, as on the desktop. */
   repo?: SectionRepo
+  /** The header's own count from a feed-built list, which a collapsed section still shows. */
+  count?: number
   data: Worktree[]
 }

@@ -1,16 +1,14 @@
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../types'
-import type { ProjectGroup } from '../../../../shared/project-group-types'
 import type { Repo } from '../../../../shared/repo-types'
 import { selectProjectGroupRemovalTargets } from '../slices/project-group-removal-targets'
 import {
-  getProjectGroupHostId,
+  isProjectGroupJoinableFromCatalog,
   resolveProjectGroupOwnerHostId,
   runtimeTargetForProjectGroupOwner
 } from '../slices/project-group-owner-routing'
 import { findRepoForHost, repoMatchesHostIdentity } from '../slices/repo-host-identity'
 import { callRuntimeRpc } from '../../runtime/runtime-rpc-client'
-import type { RuntimeClientTarget } from '../../../../shared/runtime-client-target'
 import { ipcOrRuntimeTargetForHostId } from '../../runtime/runtime-client-target'
 import { findIndexedProjectGroupOwner } from '@/lib/worktree-runtime-owner-index'
 import { getRepoExecutionHostId } from '../../../../shared/execution-host'
@@ -19,6 +17,21 @@ import { mergeProjectCompatibilityForHostRepoChange } from '../repos/repo-catalo
 import { applyProjectGroupDeleteCascade } from './project-group-removal-state'
 import { adoptFromEndpoint } from '../adopt-from-endpoint'
 import { createProjectGroupOwnerUpdate } from './project-group-owner-update'
+import { createProjectGroupOnHost } from './project-group-create-on-host'
+import { toast } from 'sonner'
+import { translate } from '@/i18n/i18n'
+
+function notifyProjectGroupOnOtherHost(): void {
+  toast.error(
+    translate('auto.store.slices.repos.moveToGroupOtherHost', 'Could not move project to group'),
+    {
+      description: translate(
+        'auto.store.slices.repos.moveToGroupOtherHostDesc',
+        'The computer this project runs on does not have this group. A project can only join groups saved on its own computer.'
+      )
+    }
+  )
+}
 
 export function createProjectGroupMutationActions(
   set: Parameters<StateCreator<AppState>>[0],
@@ -35,37 +48,7 @@ export function createProjectGroupMutationActions(
 > {
   const updateOnOwnerHost = createProjectGroupOwnerUpdate(set, get)
 
-  const createOnTarget = async (
-    target: RuntimeClientTarget,
-    args: Parameters<typeof window.api.projectGroups.create>[0]
-  ): Promise<ProjectGroup> => {
-    const group =
-      target.kind === 'local'
-        ? await window.api.projectGroups.create(args)
-        : (
-            await callRuntimeRpc<{ group: ProjectGroup }>(target, 'projectGroup.create', args, {
-              timeoutMs: 15_000
-            })
-          ).group
-    const ownedGroup = adoptFromEndpoint(target, { kind: 'projectGroup', row: group })
-    const ownerHostId = getProjectGroupHostId(ownedGroup)
-    set((s) => {
-      // An overlapping catalog refresh may have already inserted a newer copy.
-      if (
-        s.projectGroups.some(
-          (existing) =>
-            existing.id === ownedGroup.id && getProjectGroupHostId(existing) === ownerHostId
-        )
-      ) {
-        return s
-      }
-      return {
-        projectGroups: [...s.projectGroups, ownedGroup],
-        folderWorkspacePathStatuses: {}
-      }
-    })
-    return ownedGroup
-  }
+  const createOnTarget = createProjectGroupOnHost(set)
 
   return {
     createProjectGroup: async (name, hostId) => {
@@ -259,6 +242,10 @@ export function createProjectGroupMutationActions(
         if (!target) {
           return false
         }
+        if (groupId && !isProjectGroupJoinableFromCatalog(get().projectGroups, groupId, target)) {
+          notifyProjectGroupOnOtherHost()
+          return false
+        }
         const moved =
           target.kind === 'local'
             ? await window.api.projectGroups.moveProject({
@@ -293,6 +280,11 @@ export function createProjectGroupMutationActions(
             folderWorkspacePathStatuses: {}
           }
         })
+        // Why: hosts store an unknown group id as "no group" and still return the row (#13699).
+        if (groupId && (moved.projectGroupId ?? null) !== groupId) {
+          notifyProjectGroupOnOtherHost()
+          return false
+        }
         return true
       } catch (err) {
         console.error('Failed to move repo to group:', err)

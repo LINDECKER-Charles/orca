@@ -2,6 +2,7 @@ import { normalizeExecutionHostId } from './execution-host'
 import type { ProjectGroup, ProjectGroupCreatedFrom } from './project-group-types'
 import type { Repo } from './repo-types'
 import { createNonSecureContextUuid } from './non-secure-context-uuid'
+import { compareCodePoints, compareSidebarText } from './sidebar-list/text-order'
 
 export const UNGROUPED_PROJECT_GROUP_KEY = 'project-group:ungrouped'
 
@@ -92,12 +93,22 @@ export function normalizeProjectGroups(value: unknown): ProjectGroup[] {
   return groups
 }
 
-/** Sidebar order among sibling groups: manual tab order, then name. */
+type ProjectGroupSiblingOrderFields = Pick<
+  ProjectGroup,
+  'tabOrder' | 'name' | 'id' | 'executionHostId'
+>
+
+/** Sidebar order among sibling groups: manual tab order, then name, then host-qualified id. */
 export function compareProjectGroupSiblings(
-  left: Pick<ProjectGroup, 'tabOrder' | 'name'>,
-  right: Pick<ProjectGroup, 'tabOrder' | 'name'>
+  left: ProjectGroupSiblingOrderFields,
+  right: ProjectGroupSiblingOrderFields
 ): number {
-  return left.tabOrder - right.tabOrder || left.name.localeCompare(right.name)
+  return (
+    left.tabOrder - right.tabOrder ||
+    compareSidebarText(left.name, right.name) ||
+    compareCodePoints(left.executionHostId ?? '', right.executionHostId ?? '') ||
+    compareCodePoints(left.id, right.id)
+  )
 }
 
 type ProjectGroupParentLink = Pick<ProjectGroup, 'id' | 'parentGroupId'>
@@ -221,4 +232,15 @@ export function getNextProjectGroupOrder(repos: readonly Repo[], groupId: string
     }
   }
   return max + 1
+}
+
+/**
+ * One row per group id, in first-seen order. Hosts can publish one group under the same id (a
+ * project moved to a managed server keeps the desktop's copy, #30045); the last copy wins, as in
+ * every id-keyed group lookup, so the sidebar and search agree on its name.
+ */
+export function getDistinctProjectGroups<T extends Pick<ProjectGroup, 'id'>>(
+  projectGroups: readonly T[]
+): T[] {
+  return [...new Map(projectGroups.map((group) => [group.id, group])).values()]
 }

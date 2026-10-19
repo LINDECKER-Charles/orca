@@ -12,10 +12,14 @@ import type {
   WorkspaceStatus,
   WorkspaceStatusDefinition
 } from '../../../../../../shared/worktree/types'
-import type { GroupHeaderRow, WorktreeGroupBy } from '../grouping/row-types'
-import { PINNED_GROUP_KEY } from '../grouping/group-keys'
+import type {
+  GroupHeaderRow,
+  WorktreeGroupBy
+} from '../../../../../../shared/sidebar-list/row-types'
+import { PINNED_GROUP_KEY } from '../../../../../../shared/sidebar-list/group-keys'
 import { getWorkspaceStatusFromGroupKey } from '../../workspace-status'
 import { getVirtualRowTransform } from '../viewport/virtual-rows'
+import { getSidebarHeaderVisual } from './header-visuals'
 import { resolveProjectGroupHeaderColor } from '../../project-header-color'
 import { getRepoHeaderCreateState } from '../../repo-header-create-state'
 import { ProjectHeaderActions } from '../../ProjectHeaderActions'
@@ -135,6 +139,8 @@ export function renderWorktreeSectionHeaderRow(args: {
       ? getWorkspaceStatusFromGroupKey(row.key, ctx.workspaceStatuses)
       : null
   const isPinnedHeader = row.key === PINNED_GROUP_KEY
+  const headerVisual = getSidebarHeaderVisual(row.icon, ctx.workspaceStatuses)
+  const label = row.label ?? headerVisual.label ?? ''
   const repoHeaderColor = resolveProjectGroupHeaderColor({
     groupBy: ctx.groupBy,
     headerKey: row.key,
@@ -143,7 +149,7 @@ export function renderWorktreeSectionHeaderRow(args: {
   const createState = row.repo
     ? getRepoHeaderCreateState({
         repo: row.repo,
-        label: row.label,
+        label,
         sshGate: ctx.getRepoSshGate(row.repo)
       })
     : null
@@ -299,31 +305,27 @@ export function renderWorktreeSectionHeaderRow(args: {
               'cursor-grab active:cursor-grabbing'
           )}
         >
-          {row.icon ? (
-            <div
-              className={cn(
-                'flex size-4 shrink-0 items-center justify-center rounded-[4px]',
-                repoHeaderColor ? 'text-muted-foreground' : row.tone
-              )}
-            >
-              {row.repo ? (
-                <RepoIconGlyph
-                  repoIcon={row.repo.repoIcon}
-                  color={repoHeaderColor}
-                  className="size-4"
-                  iconClassName="size-3.5"
-                />
-              ) : (
-                <row.icon className="size-3" />
-              )}
-            </div>
-          ) : null}
+          <div
+            className={cn(
+              'flex size-4 shrink-0 items-center justify-center rounded-[4px]',
+              repoHeaderColor ? 'text-muted-foreground' : headerVisual.tone
+            )}
+          >
+            {row.repo ? (
+              <RepoIconGlyph
+                repoIcon={row.repo.repoIcon}
+                color={repoHeaderColor}
+                className="size-4"
+                iconClassName="size-3.5"
+              />
+            ) : (
+              <headerVisual.icon className="size-3" />
+            )}
+          </div>
 
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-1.5">
-              <div className="min-w-0 truncate text-[13px] font-semibold leading-none">
-                {row.label}
-              </div>
+              <div className="min-w-0 truncate text-[13px] font-semibold leading-none">{label}</div>
               <RepoForkIndicator upstream={row.repo?.upstream} />
               <FolderPathStatusIndicator status={projectGroupPathStatus} />
               {isRepoHeader ? <RepoScanUnavailableIndicator repo={row.repo!} /> : null}
@@ -353,7 +355,7 @@ export function renderWorktreeSectionHeaderRow(args: {
           {projectGroupForHeader ? (
             <ProjectGroupHeaderMenu
               projectGroup={projectGroupForHeader}
-              label={row.label}
+              label={label}
               projectGroups={ctx.projectGroups}
               actions={ctx.projectGroupActions}
             />
@@ -362,7 +364,7 @@ export function renderWorktreeSectionHeaderRow(args: {
           {folderBackedProjectGroup ? (
             <ProjectGroupCreateWorkspaceButton
               projectGroup={folderBackedProjectGroup}
-              label={row.label}
+              label={label}
               pathStatus={projectGroupPathStatus}
               disabled={isFolderWorkspaceCreateDisabled(projectGroupPathStatus)}
               onCreate={ctx.onCreateFolderWorkspace}
@@ -372,7 +374,7 @@ export function renderWorktreeSectionHeaderRow(args: {
           {row.repo && ctx.groupBy === 'repo' ? (
             <RepoHeaderProjectActionsMenu
               repo={row.repo}
-              label={row.label}
+              label={label}
               projectGroups={ctx.projectGroups}
               actions={ctx.projectActions}
             />
@@ -381,7 +383,7 @@ export function renderWorktreeSectionHeaderRow(args: {
           {row.repo && ctx.groupBy === 'repo' ? (
             <RepoHeaderCreateWorkspaceButton
               repo={row.repo}
-              label={row.label}
+              label={label}
               createState={createState}
               onCreateForRepo={ctx.projectActions.onCreateForRepo}
             />
